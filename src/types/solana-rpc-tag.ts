@@ -1,0 +1,18 @@
+export type SolanaRpcTag =
+  | "default"
+  | "history"
+  | "test"
+  | "send"
+  | "update"
+  | "programUpdate"
+  | "blockUpdate"
+  | "slotUpdate"
+  | "programAccounts"
+  | "private"
+  | "unlimited"
+  | "batch"
+  | "alchemy"
+  | "helius"
+  | "tokens"
+  | "multipleAccounts"
+  | "";
