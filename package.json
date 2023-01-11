@@ -2,10 +2,10 @@
   "name": "@wknd/solana-utils",
   "version": "0.0.1",
   "description": "Random helpers and definitions for smoother Solana dev experience",
-  "private": true,
+  "private": false,
   "main": "dist/solana-utils.js",
   "module": "dist/solana-utils.mjs",
-  "typings": "dist/solana-utils.d.ts",
+  "typings": "dist/index.d.ts",
   "type": "module",
   "scripts": {
     "start": "tsc",

@@ -4,7 +4,7 @@ import commonjs from '@rollup/plugin-commonjs';
 import terser from '@rollup/plugin-terser';
 import nodePolyfills from 'rollup-plugin-polyfill-node';
 
-const name = 'index';
+const name = 'solana-utils';
 
 export default {
   input: 'src/index.ts',
