@@ -67,12 +67,7 @@ export class SolanaHashService {
         ? this.recentHashes[this.recentHashes.length - 1]?.blockhash
         : null;
       if (hash?.blockhash !== lastBlockHash) {
-        // const now = new Date();
         this.recentHashes.push(hash);
-        // this.logger.logAt(
-        //   7,
-        //   `${this.logPrefix} added hash ${stringify(hash)}(${now.toJSON()}) with total length ${this.recentHashes.length}`
-        // );
         if (this.recentHashes.length > this.maxSize) {
           this.logger.logAt(
             7,
@@ -118,7 +113,6 @@ export class SolanaHashService {
 
   /** Main method to get a quickly expiring hash */
   async popHashFront(minValidBlockHeight: number): Promise<ISolanaRecentHash | null> {
-    // this.logger.logAt(5, `${this.logPrefix} popHashFront for ${minSlot}`, stringify(this.recentHashes));
     while (this.recentHashes.length) {
       const current = this.recentHashes.shift();
       if (!current) {
@@ -133,10 +127,6 @@ export class SolanaHashService {
         );
         return current;
       }
-      // this.logger.logAt(
-      //   5,
-      //   `${this.logPrefix} Going further after ${current?.lastValidBlockHeight} < ${minValidBlockHeight}`
-      // );
     }
     this.logger.logAt(5, `${this.logPrefix} Could not find a hash for minValidBlockHeight: ${minValidBlockHeight}`);
     return null;
@@ -155,10 +145,6 @@ export class SolanaHashService {
         this.logger.logAt(5, `${this.logPrefix} Found hash for ${current?.slot} >= ${minSlot}`, stringify(current));
         return current;
       }
-      // this.logger.logAt(
-      //   5,
-      //   `${this.logPrefix} Going further after ${current?.slot} < ${minSlot}`
-      // );
     }
     this.logger.logAt(5, `${this.logPrefix} Could not find a hash for minSlot: ${minSlot}`);
     return null;

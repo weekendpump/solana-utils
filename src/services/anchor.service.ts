@@ -20,7 +20,7 @@ import { SolanaApiService } from './solana-api.service';
 import { BaseLoggerService } from './base-logger.service';
 import { IDL_ACCOUNT_LAYOUT } from '../consts';
 
-/** Resolve known tokens by mint or name using multiple sources */
+/** Various Anchor related helpers */
 export class AnchorService {
   private isInitialized = false;
   readonly logPrefix = '[Anchor]';
@@ -68,8 +68,6 @@ export class AnchorService {
     if (!decoded) {
       return null;
     }
-    // this.logger.logAt(5, `${this.logPrefix} Decoded ix`, decoded);
-
     const result: IAnchorIdlDecodedInstruction = {
       name: decoded.name,
       decodedArgs: decoded.data,
@@ -251,14 +249,7 @@ export class AnchorService {
     if (!program) {
       throw 'Unable to get program';
     }
-    // this.logger.logAt(5, `${this.logPrefix} Got program with accounts: ${Object.keys(program.account)}`);
     const client = program.account[accountName];
-    // this.logger.logAt(
-    //   5,
-    //   `${this.logPrefix} Got client for account ${accountName}: ${client.coder.accounts.decode}, ${Object.keys(
-    //     program.account
-    //   )}`
-    // );
     const decoded = client.coder.accounts.decode<T>(accountNameDecode, data);
     return decoded;
   }
@@ -269,9 +260,7 @@ export class AnchorService {
     name: keyof AccountNamespace<IDL>,
     data: Buffer
   ): T {
-    // this.logger.logAt(5, `${this.logPrefix} Got program with accounts: ${Object.keys(program.account)}`);
     const client = program.account[name];
-    // this.logger.logAt(5, `${this.logPrefix} Got client for account ${accountName}: ${client.coder.accounts.decode}, ${Object.keys(program.account)}`);
     const decoded = client.coder.accounts.decode<T>(name, data);
     return decoded;
   }
