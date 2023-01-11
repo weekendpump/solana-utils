@@ -2,18 +2,22 @@
   "name": "@wknd/solana-utils",
   "version": "0.0.2",
   "description": "Random helpers and definitions for smoother Solana dev experience",
+  "author": "Weekend Pump",
+  "license": "(MIT OR Apache-2.0)",
+  "homepage": "https://weekendpump.com",
   "private": false,
-  "main": "dist/solana-utils.js",
-  "module": "dist/solana-utils.mjs",
-  "typings": "dist/index.d.ts",
-  "type": "module",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "browser": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
     "start": "tsc",
-    "build": "rollup -c"
+    "build": "rimraf dist/ && yarn build:browser",
+    "build:browser": "rollup -c"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/weekendpump/solana-utils.git"
+    "url": "git+https://github.com/weekendpump/solana-utils.git"
   },
   "publishConfig": {
     "access": "public"
@@ -47,5 +51,11 @@
   },
   "files": [
     "dist"
+  ],
+  "bugs": {
+    "url": "https://github.com/weekendpump/solana-utils/issues"
+  },
+  "keywords": [
+    "solana"
   ]
 }

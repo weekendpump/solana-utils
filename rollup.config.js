@@ -4,18 +4,18 @@ import commonjs from '@rollup/plugin-commonjs';
 import terser from '@rollup/plugin-terser';
 import nodePolyfills from 'rollup-plugin-polyfill-node';
 
-const name = 'solana-utils';
+const name = 'index';
 
 export default {
   input: 'src/index.ts',
   output: [
     {
-      file: `dist/${name}.min.js`,
+      file: `dist/${name}.js`,
       format: 'cjs',
       sourcemap: true,
     },
     {
-      file: `dist/${name}.min.mjs`,
+      file: `dist/${name}.mjs`,
       format: 'es',
       sourcemap: true,
     },
