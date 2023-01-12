@@ -16,9 +16,9 @@ import { inflate } from 'pako';
 import { IAnchorIdl, IAnchorIdlDecodedInstruction } from '../interfaces';
 import { IMap } from '../types';
 import { SolanaKey, toKey, toKeyString } from '../utils';
-import { SolanaApiService } from './solana-api.service';
 import { BaseLoggerService } from './base-logger.service';
 import { IDL_ACCOUNT_LAYOUT } from '../consts';
+import { SolanaApiService } from './solana';
 
 /** Various Anchor related helpers */
 export class AnchorService {

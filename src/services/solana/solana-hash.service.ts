@@ -1,7 +1,7 @@
-import { ISolanaRecentHash } from '../interfaces';
-import { IMap } from '../types';
-import { sleep, stringify } from '../utils';
-import { BaseLoggerService } from './base-logger.service';
+import { ISolanaRecentHash } from '../../interfaces';
+import { IMap } from '../../types';
+import { sleep, stringify } from '../../utils';
+import { BaseLoggerService } from '../base-logger.service';
 import { SolanaApiService } from './solana-api.service';
 
 /** Resolve recent block hashes */

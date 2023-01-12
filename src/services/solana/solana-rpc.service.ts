@@ -1,7 +1,7 @@
 import { Commitment, Connection, ConnectionConfig } from '@solana/web3.js';
-import { SOLANA_ENDPOINTS_CONFIG } from '../consts';
-import { IMap, SolanaConnection, SolanaEndpointConfig, SolanaEndpointNetwork, SolanaRpcTag } from '../types';
-import { BaseLoggerService } from './base-logger.service';
+import { SOLANA_ENDPOINTS_CONFIG } from '../../consts';
+import { IMap, SolanaConnection, SolanaEndpointConfig, SolanaEndpointNetwork, SolanaRpcTag } from '../../types';
+import { BaseLoggerService } from '../base-logger.service';
 
 /** Handles everything related to picking the RPC */
 export class SolanaRpcService {

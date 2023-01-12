@@ -35,14 +35,12 @@ import {
 } from '@solana/web3.js';
 
 import { Buffer } from 'buffer';
-import { CompatibleTransaction, IMap, SolanaConnection, SolanaRpcTag } from '../types';
-import { LazySolanaKey, SolanaKey, toKey, toKeyString } from '../utils';
-import { ISolanaAccountUpdate, ISolanaRecentHash, ISolanaSimulationBalances } from '../interfaces';
-import { chunks, sleep } from '../utils/common-utils';
-import { stringify } from '../utils/display-utils';
-import { MEMO_PROGRAM_ID } from '../consts';
+import { ISolanaAccountUpdate, ISolanaRecentHash, ISolanaSimulationBalances } from '../../interfaces';
+import { CompatibleTransaction, IMap, SolanaConnection, SolanaRpcTag } from '../../types';
+import { BaseLoggerService } from '../base-logger.service';
+import { MEMO_PROGRAM_ID } from '../../consts';
+import { SolanaKey, toKey, LazySolanaKey, toKeyString, chunks, sleep, stringify } from '../../utils';
 import { SolanaRpcService } from './solana-rpc.service';
-import { BaseLoggerService } from './base-logger.service';
 
 export class SolanaApiService {
   readonly logPrefix = '[SolanaApi]';
@@ -176,10 +174,13 @@ export class SolanaApiService {
     filters?: GetProgramAccountsFilter[],
     commitment: Commitment = 'confirmed',
     dataSlice?: { offset: number; length: number },
-    connection?: Connection
+    connection?: SolanaConnection
   ): Promise<ISolanaAccountUpdate[]> {
     try {
-      const c = connection ?? this.connect(commitment, 'programAccounts');
+      const c: SolanaConnection = connection ?? this.connect(commitment, 'programAccounts');
+      if (!c) {
+        throw 'Unable to get Solana connection';
+      }
       const params = { dataSlice, commitment, filters };
       this.logger.logAt(
         5,
@@ -337,15 +338,15 @@ export class SolanaApiService {
     return result;
   }
 
-  async getFirstAvailableBlock(connection?: Connection): Promise<number> {
-    const c = connection ?? this.connect();
+  async getFirstAvailableBlock(connection?: SolanaConnection): Promise<number> {
+    const c: SolanaConnection = connection ?? this.connect('processed');
     const response = await c.getFirstAvailableBlock();
     this.logger.logAt(8, `${this.logPrefix} Got first available block`, response);
     return response;
   }
 
   async getBlockHeight(
-    connection?: Connection,
+    connection?: SolanaConnection,
     commitment: Commitment = 'processed',
     minContextSlot?: number
   ): Promise<number> {
@@ -353,32 +354,32 @@ export class SolanaApiService {
     return c.getBlockHeight({ commitment, minContextSlot });
   }
 
-  async getMinimumLedgerSlot(): Promise<number> {
-    const c = this.connect();
+  async getMinimumLedgerSlot(connection?: SolanaConnection): Promise<number> {
+    const c: SolanaConnection = connection ?? this.connect('processed');
     const response = await c.getMinimumLedgerSlot();
     this.logger.logAt(8, `${this.logPrefix} Got minimum ledger slot`, response);
     return response;
   }
 
-  async getBlockTime(slot: number): Promise<number | null> {
-    const c = this.connect();
+  async getBlockTime(slot: number, connection?: SolanaConnection): Promise<number | null> {
+    const c: SolanaConnection = connection ?? this.connect('processed');
     const response = await c.getBlockTime(slot);
     return response;
   }
 
-  async getEpochInfo(commitment: Finality = 'confirmed'): Promise<EpochInfo> {
-    const c = this.connect();
+  async getEpochInfo(connection?: SolanaConnection, commitment: Finality = 'confirmed'): Promise<EpochInfo> {
+    const c: SolanaConnection = connection ?? this.connect('processed');
     const response = await c.getEpochInfo(commitment);
     return response;
   }
 
-  subscribeToSlotChanges(connection?: Connection, callback?: SlotChangeCallback) {
-    const c = connection ?? this.connect('processed', 'slotUpdate');
+  subscribeToSlotChanges(connection?: SolanaConnection, callback?: SlotChangeCallback) {
+    const c: SolanaConnection = connection ?? this.connect('processed', 'slotUpdate');
     c.onSlotChange((info) => (callback ? callback(info) : this.handleSlotChange(info)));
   }
 
-  subscribeToSlotUpdates(connection?: Connection, callback?: SlotUpdateCallback) {
-    const c = connection ?? this.connect('processed', 'slotUpdate');
+  subscribeToSlotUpdates(connection?: SolanaConnection, callback?: SlotUpdateCallback) {
+    const c: SolanaConnection = connection ?? this.connect('processed', 'slotUpdate');
     c.onSlotUpdate((update) => (callback ? callback(update) : this.handleSlotUpdate(update)));
   }
 

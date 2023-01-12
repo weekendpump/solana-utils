@@ -5,9 +5,9 @@ import {
   PublicKey,
   TransactionInstruction,
 } from '@solana/web3.js';
-import { BaseLoggerService } from './base-logger.service';
-import { SolanaKey, toKey } from '../utils';
-import { SolanaConnection } from '../types';
+import { BaseLoggerService } from '../base-logger.service';
+import { SolanaKey, toKey } from '../../utils';
+import { SolanaConnection } from '../../types';
 
 /** Basic wrapper around AddressLookupTableProgram  */
 export class SolanaLookupService {
