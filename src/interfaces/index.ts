@@ -1,11 +1,11 @@
 export * from './anchor-idl-decoded.interface';
 export * from './anchor-idl.interface';
+export * from './birdeye';
 export * from './http-response-wrapper.interface';
 export * from './solana-account-update.interface';
 export * from './solana-parsed-token-instruction.interface';
 export * from './solana-recent-hash.interface';
 export * from './solana-simulation-balances.interface';
 export * from './solana-token-change.interface';
-export * from './token-account-info.interface';
-
 export * from './solscan';
+export * from './token-account-info.interface';

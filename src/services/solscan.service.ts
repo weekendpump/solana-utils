@@ -12,17 +12,8 @@ export class SolscanService {
   constructor(protected readonly logger: BaseLoggerService, protected readonly http: BaseHttpService) {}
 
   async getTokenHolders(tokenKey: SolanaKey, offset = 0, limit = 10): Promise<ISolScanTokenHolders[]> {
-    // TODO: re-enable when working again or find a better way
-    return [];
-    const key = toKeyString(`${toKeyString(tokenKey)}_${offset}_${limit}`);
-    if (this.tokenHoldersCache[key]) {
-      return this.tokenHoldersCache[key];
-    }
-
     const url = `${this.apiRoot}/token/holders?tokenAddress=${toKeyString(tokenKey)}&offset=${offset}&limit=${limit}`;
     const response = await this.http.get<ISolScanListResponse<ISolScanTokenHolders>>(url);
-    this.tokenHoldersCache[key] = response?.data?.data;
-
-    return this.tokenHoldersCache[key];
+    return response?.data?.data;
   }
 }
