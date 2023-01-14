@@ -1,4 +1,12 @@
-import { Connection, KeyedAccountInfo, Transaction, VersionedTransaction } from '@solana/web3.js';
+import {
+  AccountInfo,
+  Connection,
+  KeyedAccountInfo,
+  ParsedAccountData,
+  PublicKey,
+  Transaction,
+  VersionedTransaction,
+} from '@solana/web3.js';
 import BN from 'bn.js';
 
 export type SolanaConnection = Connection;
@@ -6,6 +14,13 @@ export type GenericKeyAccount = KeyedAccountInfo;
 
 export type TransactionLike = Transaction | Buffer | string | VersionedTransaction;
 export type CompatibleTransaction = Transaction | VersionedTransaction;
+
+export type BufferOrParsedAccount = Buffer | ParsedAccountData;
+
+export type ParsedAccountPair = {
+  pubkey: PublicKey;
+  account: AccountInfo<BufferOrParsedAccount>;
+};
 
 export interface IMap<T> {
   [key: string]: T;

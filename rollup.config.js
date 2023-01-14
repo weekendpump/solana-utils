@@ -26,13 +26,6 @@ export default {
     nodeResolve({
       resolveOnly: [
         '@solana/*',
-        '@coral-xyz/*',
-        'bn.js',
-        'decimal.js',
-        'bs58',
-        'pako',
-        'rxjs',
-        'snake-case',
       ],
       preferBuiltins: false,
     }),
