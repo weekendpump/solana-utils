@@ -1,6 +1,6 @@
 {
   "name": "@wknd/solana-utils",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "Random helpers and definitions for smoother Solana dev experience",
   "author": "Weekend Pump",
   "license": "(MIT OR Apache-2.0)",
