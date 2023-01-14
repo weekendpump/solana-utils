@@ -285,7 +285,13 @@ export class SplTokenService {
     return ix;
   }
 
-  async ensureAtaIxs(owner: SolanaKey, mints: SolanaKey[], payer?: SolanaKey): Promise<TransactionInstruction[]> {
+  async ensureAtaIxs(
+    owner: SolanaKey,
+    mints: SolanaKey[],
+    payer?: SolanaKey,
+    connection?: SolanaConnection
+  ): Promise<TransactionInstruction[]> {
+    const c = connection ?? this.solanaApi.connect();
     if (!payer) {
       payer = owner;
     }
@@ -297,7 +303,7 @@ export class SplTokenService {
         atas[toKeyString(m)] = toKeyString(ata);
       }
     }
-    const accountMap = await this.solanaApi.getMultipleAccounts(Object.values(atas));
+    const accountMap = await this.solanaApi.getMultipleAccounts(Object.values(atas), c);
 
     const createATAIxs: TransactionInstruction[] = [];
     for (const m of Object.keys(atas)) {
