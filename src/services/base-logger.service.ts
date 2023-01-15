@@ -1,5 +1,5 @@
 export abstract class BaseLoggerService {
-  readonly displayLogLevel = 5;
+  readonly displayLogLevel = 7;
   readonly addTimestamp = true;
 
   abstract log(message: unknown, ...params: unknown[]): void;
@@ -7,6 +7,6 @@ export abstract class BaseLoggerService {
 
   protected timestamp(showMs = false): string {
     const d = new Date();
-    return `[${d.toISOString()}${showMs ? " " + d.getMilliseconds() : ""}]`;
+    return `[${d.toISOString()}${showMs ? ' ' + d.getMilliseconds() : ''}]`;
   }
 }

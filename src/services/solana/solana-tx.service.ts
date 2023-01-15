@@ -78,16 +78,6 @@ export class SolanaTxService {
       return null;
     }
 
-    // this.logger.logAt(
-    //   5,
-    //   `${this.logPrefix} lookup test`,
-    //   stringify({
-    //     lookups: tx.message.addressTableLookups,
-    //     header: tx.message.header,
-    //     keys: tx.message.getAccountKeys({ addressLookupTableAccounts }),
-    //   })
-    // );
-
     if (showSize) {
       const serialized = tx.serialize();
       this.logger.logAt(
@@ -97,16 +87,17 @@ export class SolanaTxService {
     }
 
     const writableKeys = includeBalances ? getWritableAccountsVersioned(tx, addressLookupTableAccounts) : [];
-    this.logger.logAt(7, `${this.logPrefix} Writable keys for simulation`, stringify(writableKeys));
+    this.logger.logAt(8, `${this.logPrefix} Writable keys for simulation`, stringify(writableKeys));
 
     const balances: IMap<bigint | number> = {};
     if (includeBalances) {
-      const accounts = await this.token.getMultipleTokenAccounts(writableKeys);
+      const accounts = await this.token.getMultipleTokenAccounts(writableKeys, connection);
       for (const a of accounts) {
         balances[toKeyString(a.id)] = a.amount;
       }
     }
-    // this.logger.logAt(5, `${this.logPrefix} Balances before simulation`, stringify(balances));
+
+    this.logger.logAt(8, `${this.logPrefix} Balances before simulation`, stringify(balances));
 
     if (!config) {
       config = {};

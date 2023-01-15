@@ -1,7 +1,7 @@
-import { BaseLoggerService } from "./base-logger.service";
+import { BaseLoggerService } from './base-logger.service';
 
 export class ConsoleLoggerService extends BaseLoggerService {
-  readonly displayLogLevel = 5;
+  readonly displayLogLevel = 7;
   readonly addTimestamp = true;
 
   debug(message: unknown, ...params: unknown[]) {
@@ -24,8 +24,10 @@ export class ConsoleLoggerService extends BaseLoggerService {
         console.error(...params);
       } else if (level < 4) {
         console.warn(...params);
+      } else if (level < 6) {
+        console.log(...params);
       }
-      console.log(...params);
+      console.debug(...params);
     }
   }
 

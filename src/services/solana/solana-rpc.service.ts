@@ -15,6 +15,10 @@ export class SolanaRpcService {
     return c;
   }
 
+  insertConnectionConfig(config: SolanaEndpointConfig, env: SolanaEndpointNetwork = 'mainnet-beta') {
+    SOLANA_ENDPOINTS_CONFIG[env].unshift(config);
+  }
+
   /** Get first connection that has a given tag */
   getRpcConnectionByTag(
     tag: SolanaRpcTag,

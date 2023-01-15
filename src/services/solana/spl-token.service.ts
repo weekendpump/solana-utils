@@ -10,6 +10,7 @@ import {
   createCloseAccountInstruction,
   createInitializeMint2Instruction,
   createMintToInstruction,
+  createTransferCheckedInstruction,
   MintLayout,
   MINT_SIZE,
 } from '@solana/spl-token';
@@ -227,6 +228,37 @@ export class SplTokenService {
       );
       return null;
     }
+  }
+
+  /** create transfer ix, resolving ATAs for sender and receiver  */
+  createTransferIx(
+    sender: SolanaKey,
+    mint: SolanaKey,
+    receiver: SolanaKey,
+    decimals: number,
+    amount: number | bigint
+  ): TransactionInstruction | null {
+    const source = this.getATA(sender, mint);
+    const destination = this.getATA(receiver, mint);
+    this.logger.logAt(
+      7,
+      `${this.logPrefix} createTransferIx`,
+      stringify({ sender, source, receiver, destination, mint, amount, decimals })
+    );
+    if (!source || !destination || decimals < 0 || amount <= 0) {
+      this.logger.logAt(4, `${this.logPrefix} createTransferIx: invalid arguments`);
+      return null;
+    }
+
+    const instruction = createTransferCheckedInstruction(
+      toKey(source),
+      toKey(mint),
+      toKey(destination),
+      toKey(sender),
+      amount,
+      decimals
+    );
+    return instruction;
   }
 
   async createInitMintIxs(
