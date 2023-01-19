@@ -53,16 +53,68 @@ export class SolanaTxService {
     const compiledMessage = message.compileToV0Message(addressLookupTableAccounts);
     const transactionV0 = new VersionedTransaction(compiledMessage);
 
-    // this.logger.logAt(
-    //   5,
-    //   `${this.logPrefix} Compiled tx v0`,
-    //   stringify({
-    //     staticAccountKeys: message.staticAccountKeys,
-    //     numAccountKeysFromLookups: message.numAccountKeysFromLookups,
-    //     addressTableLookups: message.addressTableLookups,
-    //   })
-    // );
     return transactionV0;
+  }
+
+  /** Tries to pack as many Instructions as possible into a VersionedTransaction, creating subsequent ones when necessary */
+  async packIxs(
+    payer: SolanaKey,
+    ixs: TransactionInstruction[][],
+    addressLookupTableAccounts?: AddressLookupTableAccount[],
+    recentBlockhash?: string,
+    peekHash = true
+  ): Promise<VersionedTransaction[]> {
+    const results: VersionedTransaction[] = [];
+    if (!ixs) {
+      return results;
+    }
+
+    if (!recentBlockhash) {
+      recentBlockhash = peekHash ? await this.solanaHash.peekHash() : await this.solanaHash.popHash();
+    }
+    const payerKey = toKey(payer);
+
+    let batch: TransactionInstruction[] = [];
+    let tx: VersionedTransaction | null = null;
+
+    for (const chunk of ixs) {
+      try {
+        const instructions = [...batch, ...chunk];
+
+        const message = new TransactionMessage({
+          payerKey,
+          recentBlockhash,
+          instructions,
+        });
+        const msg = message.compileToV0Message(addressLookupTableAccounts);
+        const serialized = msg.serialize();
+        if (serialized) {
+          batch = instructions;
+          tx = new VersionedTransaction(msg);
+          this.logger.logAt(
+            8,
+            `${this.logPrefix} Serialization to ${serialized.length} bytes ok, trying to pack more than ${batch?.length} ixs`
+          );
+        }
+      } catch (err) {
+        this.logger.logAt(8, `${this.logPrefix} Serialization error, let's try to close it with ${batch.length} ixs`);
+        if (tx) {
+          results.push(tx);
+          batch = [];
+          tx = null;
+        } else {
+          throw new Error('Cannot pack ix batch into single tx');
+        }
+      }
+    }
+
+    if (tx) {
+      results.push(tx);
+    }
+
+    this.logger.logAt(5, `${this.logPrefix} Done packing with ${results?.length} txs`);
+
+    return results;
   }
 
   /** Versioned Wrapper around solanaApi method with extra balance checks */

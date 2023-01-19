@@ -29,7 +29,7 @@ import { ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID } from '../../consts';
 
 export class SplTokenService {
   readonly logPrefix = '[SplToken]';
-  readonly cachedMints: IMap<Promise<IMintInfo>> = {};
+  readonly cachedMints: IMap<IMintInfo> = {};
   cacheInitialized = false;
   readonly tokenProgramId: LazySolanaKey;
   readonly associatedTokenProgramId: LazySolanaKey;
@@ -37,6 +37,62 @@ export class SplTokenService {
   constructor(protected readonly logger: BaseLoggerService, protected readonly solanaApi: SolanaApiService) {
     this.tokenProgramId = LazySolanaKey.from(TOKEN_PROGRAM_ID, true);
     this.associatedTokenProgramId = LazySolanaKey.from(ASSOCIATED_TOKEN_PROGRAM_ID, true);
+  }
+
+  async getMint(mint: SolanaKey, force = false, cacheOnly = false): Promise<IMintInfo | null> {
+    const mintKey = toKeyString(mint);
+    if (!force && this.cachedMints[mintKey]) {
+      return this.cachedMints[mintKey];
+    }
+
+    if (cacheOnly) {
+      return null;
+    }
+
+    const mintAccount = await this.solanaApi.getAccount(mint);
+    if (!mintAccount || !mintAccount.accountInfo) {
+      return null;
+    }
+    const mintInfo = this.toMintInfo(mintAccount.accountInfo, mintAccount.accountId);
+    if (!mintInfo) {
+      return null;
+    }
+    this.cachedMints[mintKey] = mintInfo;
+    return mintInfo;
+  }
+
+  async getMultipleMintAccounts(
+    keys: SolanaKey[],
+    force = false,
+    connection?: SolanaConnection
+  ): Promise<IMap<IMintInfo>> {
+    const cachedMintsAll = await Promise.all(keys.map((x) => this.getMint(x, force, true)));
+    const cachedMints = cachedMintsAll.filter((x) => Boolean(x));
+    const result: IMap<IMintInfo> = {};
+    for (const m of cachedMints) {
+      if (m) {
+        result[m.id] = m;
+      }
+    }
+
+    const keysNeeded = keys.filter((x) => !result[toKeyString(x)]);
+    if (keysNeeded.length) {
+      this.logger.logAt(8, `${this.logPrefix} Got ${keysNeeded.length} extra mints to resolve`, stringify(keysNeeded));
+      const accounts = await this.solanaApi.getMultipleAccounts(keysNeeded, connection, 99, 300);
+
+      Object.values(accounts).forEach((a) => {
+        if (!a || !a.accountInfo) {
+          return;
+        }
+        const info = this.toMintInfo(a.accountInfo, a.accountId);
+        if (info) {
+          result[info.id] = info;
+          this.cachedMints[info.id] = info;
+        }
+      });
+    }
+
+    return result;
   }
 
   async getMultipleTokenAccounts(keys: SolanaKey[], connection?: SolanaConnection): Promise<ITokenAccountInfo[]> {
@@ -58,7 +114,7 @@ export class SplTokenService {
   async getOwnerTokenMap(ownerKey: SolanaKey, connection?: SolanaConnection): Promise<IMap<string>> {
     const result: IMap<string> = {};
     this.logger.logAt(
-      5,
+      8,
       `${this.logPrefix} getOwnerTokenMap`,
       stringify({ ownerKey, rpcEndpoint: connection?.rpcEndpoint })
     );
