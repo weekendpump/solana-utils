@@ -1,18 +1,35 @@
 import { TokenInfo, TokenListProvider } from '@solana/spl-token-registry';
+import { PublicKey } from '@solana/web3.js';
+import { Metadata, PROGRAM_ID } from '@metaplex-foundation/mpl-token-metadata';
+
 import { USDC_MINT } from '../../consts';
 import { ISolanaRegistryToken } from '../../interfaces';
-import { IMap, SolanaEndpointNetwork } from '../../types';
-import { SolanaKey, toKeyString, LazySolanaKey, stringify } from '../../utils';
+import { IMap, SolanaConnection, SolanaEndpointNetwork } from '../../types';
+import { SolanaKey, toKeyString, LazySolanaKey, stringify, toKey } from '../../utils';
 import { BaseLoggerService } from '../base-logger.service';
 import { SolanaApiService } from './solana-api.service';
+import { SplTokenService } from './spl-token.service';
 
 export class SolanaRegistryService {
   readonly logPrefix = '[SolanaRegistry]';
   tokensByMint: IMap<IMap<ISolanaRegistryToken>> = {};
   tokensBySymbol: IMap<IMap<ISolanaRegistryToken[]>> = {};
   private isInitialized = false;
+  readonly authorityNames: IMap<string> = {
+    '5Q544fKrFoe6tsEbD7S8EmxGTJYAKtTVhAW5Q5pge4j1': 'Raydium Position',
+    '4bf5HQQZ9qtGGCuxYNnhiTrKpTMTX6HSoLy5a7wUjCEb': 'Port Position',
+    GU1nCjN7mcLiSX1dtBw2t9agYCw3ybXfu1me41Q2tGT3: 'Port Position',
+    '3uTzTX5GBSfbW7eM9R9k95H7Txe32Qw3Z25MtyD2dzwC': 'Atrix Position',
+    FERjPVNEa7Udq8CEv68h6tPL46Tq7ieE49HrE2wea3XT: 'Meteora Position',
+    '8xqUXpvwF3Nr2Ee2izrfm69V4DK8kQK8jYSb2MiS3GCF': 'Nazare Position',
+    '29XZFcXFNqv8pfMMswRkXLWUTTmVosDFX9ipB3rAVZcY': 'Solend cToken',
+  };
 
-  constructor(protected readonly logger: BaseLoggerService, protected readonly solanaApi: SolanaApiService) {}
+  constructor(
+    protected readonly logger: BaseLoggerService,
+    protected readonly solanaApi: SolanaApiService,
+    protected readonly token: SplTokenService
+  ) {}
 
   async init(force = false): Promise<boolean> {
     if (this.isInitialized && !force) {
@@ -29,15 +46,69 @@ export class SolanaRegistryService {
   ): Promise<IMap<ISolanaRegistryToken>> {
     const results: IMap<ISolanaRegistryToken> = {};
 
+    const unresolved: SolanaKey[] = [];
+
     for (const m of mints) {
       const token = this.findByMint(m, env);
       if (token) {
         results[toKeyString(m)] = token;
+      } else {
+        unresolved.push(m);
       }
     }
 
-    /** TODO: resolve new metaplex metadata */
+    const metaMints = await this.resolveMetadata(unresolved);
 
+    return { ...results, ...metaMints };
+  }
+
+  getMintMetadataPDA(mint: SolanaKey): SolanaKey {
+    const result = PublicKey.findProgramAddressSync(
+      [Buffer.from('metadata'), PROGRAM_ID.toBuffer(), toKey(mint).toBuffer()],
+      PROGRAM_ID
+    );
+    return result[0];
+  }
+
+  async resolveMetadata(mintKeys: SolanaKey[], connection?: SolanaConnection): Promise<IMap<ISolanaRegistryToken>> {
+    const metaAccountIds = mintKeys.map((x) => this.getMintMetadataPDA(x));
+    const metadataAccounts = await this.solanaApi.getMultipleAccounts(metaAccountIds, connection);
+    const mints = await this.token.getMultipleMintAccounts(mintKeys, false, connection);
+
+    const results: IMap<ISolanaRegistryToken> = {};
+
+    for (const m of mintKeys) {
+      const mintKey = toKeyString(m);
+      const pdaKey = toKeyString(this.getMintMetadataPDA(m));
+
+      const pda = metadataAccounts[pdaKey];
+      const mint = mints[mintKey];
+      if (!mint) {
+        continue;
+      }
+      if (!pda || !pda.accountInfo) {
+        const name = mint.mintAuthority ? this.authorityNames[toKeyString(mint.mintAuthority)] ?? '' : '';
+
+        results[mintKey] = {
+          address: mintKey,
+          chainId: 1,
+          decimals: mint.decimals,
+          name,
+          symbol: '',
+        };
+        continue;
+      } else {
+        const metadata = Metadata.fromAccountInfo(pda.accountInfo)[0];
+        results[mintKey] = {
+          address: mintKey,
+          chainId: 1,
+          decimals: mint.decimals,
+          name: metadata.data.name.trimEnd().replace(/\0/g, ''),
+          symbol: metadata.data.symbol.trim().replace(/\0/g, ''),
+        };
+      }
+    }
+    this.logger.logAt(5, `${this.logPrefix} Got metadata entries`, stringify({ results, mintKeys, metaAccountIds }));
     return results;
   }
 

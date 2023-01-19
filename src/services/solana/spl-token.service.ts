@@ -14,6 +14,7 @@ import {
   createBurnInstruction,
   MintLayout,
   MINT_SIZE,
+  createRevokeInstruction,
 } from '@solana/spl-token';
 import {
   AccountInfo,
@@ -366,8 +367,18 @@ export class SplTokenService {
   }
 
   createApproveIx(account: SolanaKey, delegate: SolanaKey, owner: SolanaKey, amount: number | bigint) {
-    this.logger.logAt(8, `${this.logPrefix} createApproveInstruction`, account, delegate, owner, amount?.toString());
+    this.logger.logAt(
+      8,
+      `${this.logPrefix} createApproveInstruction`,
+      stringify({ account, delegate, owner, amount: amount?.toString() })
+    );
     const instruction = createApproveInstruction(toKey(account), toKey(delegate), toKey(owner), amount);
+    return instruction;
+  }
+
+  createRevokeIx(account: SolanaKey, owner: SolanaKey) {
+    this.logger.logAt(8, `${this.logPrefix} createRevokeInstruction`, stringify({ account, owner }));
+    const instruction = createRevokeInstruction(toKey(account), toKey(owner));
     return instruction;
   }
 

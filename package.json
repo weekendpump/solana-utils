@@ -1,6 +1,6 @@
 {
   "name": "@wknd/solana-utils",
-  "version": "0.0.11",
+  "version": "0.0.12",
   "description": "Random helpers and definitions for smoother Solana dev experience",
   "author": "Weekend Pump",
   "license": "(MIT OR Apache-2.0)",
@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "@coral-xyz/anchor": "0.26.0",
+    "@metaplex-foundation/mpl-token-metadata": "2.5.2",
     "@project-serum/borsh": "0.2.5",
     "@solana/buffer-layout": "4.0.1",
     "@solana/spl-token": "0.3.6",
