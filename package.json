@@ -1,6 +1,6 @@
 {
   "name": "@wknd/solana-utils",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "description": "Random helpers and definitions for smoother Solana dev experience",
   "author": "Weekend Pump",
   "license": "(MIT OR Apache-2.0)",
@@ -28,6 +28,7 @@
     "@project-serum/borsh": "0.2.5",
     "@solana/buffer-layout": "4.0.1",
     "@solana/spl-token": "0.3.6",
+    "@solana/spl-token-registry": "0.2.4574",
     "@solana/web3.js": "1.73.0",
     "bip39": "3.0.4",
     "bn.js": "5.1.1",

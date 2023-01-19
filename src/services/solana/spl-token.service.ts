@@ -11,6 +11,7 @@ import {
   createInitializeMint2Instruction,
   createMintToInstruction,
   createTransferCheckedInstruction,
+  createBurnInstruction,
   MintLayout,
   MINT_SIZE,
 } from '@solana/spl-token';
@@ -197,6 +198,10 @@ export class SplTokenService {
    */
   toAccountInfoFromBuffer(buf: Buffer, id: SolanaKey = '', decimals = -1): ITokenAccountInfo | null {
     try {
+      if (buf?.length !== AccountLayout.span) {
+        this.logger.logAt(4, `toAccountInfoFromBuffer: invalid account data for ${toKeyString(id)}`);
+        return null;
+      }
       const accountInfo = AccountLayout.decode(buf);
       const amountString = accountInfo.amount.toString();
       let amountNumber = 0;
@@ -206,7 +211,7 @@ export class SplTokenService {
       }
       return { ...accountInfo, id, amountString, amountNumber, decimals };
     } catch (err) {
-      this.logger.logAt(7, `Error parsing token account ${toKeyString(id)}`, err);
+      this.logger.logAt(4, `Error parsing token account ${toKeyString(id)}`, err);
       return null;
     }
   }
@@ -241,7 +246,7 @@ export class SplTokenService {
     const source = this.getATA(sender, mint);
     const destination = this.getATA(receiver, mint);
     this.logger.logAt(
-      7,
+      8,
       `${this.logPrefix} createTransferIx`,
       stringify({ sender, source, receiver, destination, mint, amount, decimals })
     );
@@ -259,6 +264,16 @@ export class SplTokenService {
       decimals
     );
     return instruction;
+  }
+
+  async createBurnIx(
+    account: SolanaKey,
+    mint: SolanaKey,
+    owner: SolanaKey,
+    amount: number | bigint
+  ): Promise<TransactionInstruction> {
+    const burnIx = createBurnInstruction(toKey(account), toKey(mint), toKey(owner), amount);
+    return burnIx;
   }
 
   async createInitMintIxs(
@@ -295,12 +310,15 @@ export class SplTokenService {
   }
 
   createApproveIx(account: SolanaKey, delegate: SolanaKey, owner: SolanaKey, amount: number | bigint) {
-    this.logger.logAt(5, `${this.logPrefix} createApproveInstruction`, account, delegate, owner, amount?.toString());
+    this.logger.logAt(8, `${this.logPrefix} createApproveInstruction`, account, delegate, owner, amount?.toString());
     const instruction = createApproveInstruction(toKey(account), toKey(delegate), toKey(owner), amount);
     return instruction;
   }
 
-  createCloseIx(account: SolanaKey, destination: SolanaKey, authority: SolanaKey): TransactionInstruction {
+  createCloseIx(account: SolanaKey, authority: SolanaKey, destination?: SolanaKey): TransactionInstruction {
+    if (!destination) {
+      destination = authority;
+    }
     return createCloseAccountInstruction(toKey(account), toKey(destination), toKey(authority));
   }
 
@@ -349,7 +367,7 @@ export class SplTokenService {
     }
 
     this.logger.logAt(
-      5,
+      8,
       `${this.logPrefix} ensureAtaIxs: returning ${createATAIxs?.length} ixs`,
       stringify({ owner, mints, payer })
     );
