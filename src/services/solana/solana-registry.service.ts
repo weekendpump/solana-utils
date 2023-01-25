@@ -1,7 +1,6 @@
 import { TokenInfo, TokenListProvider } from '@solana/spl-token-registry';
-import { PublicKey } from '@solana/web3.js';
 import { Metadata, PROGRAM_ID } from '@metaplex-foundation/mpl-token-metadata';
-
+import { PublicKey } from '@solana/web3.js';
 import { USDC_MINT } from '../../consts';
 import { ISolanaRegistryToken } from '../../interfaces';
 import { IMap, SolanaConnection, SolanaEndpointNetwork } from '../../types';
@@ -108,7 +107,7 @@ export class SolanaRegistryService {
         };
       }
     }
-    this.logger.logAt(5, `${this.logPrefix} Got metadata entries`, stringify({ results, mintKeys, metaAccountIds }));
+    this.logger.logAt(8, `${this.logPrefix} Got metadata entries`, stringify({ results, mintKeys, metaAccountIds }));
     return results;
   }
 

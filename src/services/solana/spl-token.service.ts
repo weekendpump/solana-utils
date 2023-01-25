@@ -27,17 +27,110 @@ import {
 } from '@solana/web3.js';
 import { IMintInfo, ITokenAccountInfo, ITokenAccountMini } from '../../interfaces';
 import { ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID } from '../../consts';
+import { SolanaUpdateService } from './solana-update.service';
+import { combineLatest, filter, map, Observable, shareReplay } from 'rxjs';
+import { BN } from '@coral-xyz/anchor';
 
 export class SplTokenService {
   readonly logPrefix = '[SplToken]';
   readonly cachedMints: IMap<IMintInfo> = {};
-  cacheInitialized = false;
   readonly tokenProgramId: LazySolanaKey;
   readonly associatedTokenProgramId: LazySolanaKey;
 
-  constructor(protected readonly logger: BaseLoggerService, protected readonly solanaApi: SolanaApiService) {
+  constructor(
+    protected readonly logger: BaseLoggerService,
+    protected readonly solanaApi: SolanaApiService,
+    protected readonly solanaUpdate: SolanaUpdateService
+  ) {
     this.tokenProgramId = LazySolanaKey.from(TOKEN_PROGRAM_ID, true);
     this.associatedTokenProgramId = LazySolanaKey.from(ASSOCIATED_TOKEN_PROGRAM_ID, true);
+  }
+
+  /** Returns token balance stream without decimals */
+  getTokenBalance$(accountId: SolanaKey, getInitial = true, skipEmpty = true): Observable<bigint> {
+    const update$ = this.solanaUpdate.safeAccountUpdate(accountId, undefined, true, getInitial);
+    return update$.pipe(
+      filter((u) => Boolean(u?.accountInfo?.data) || !skipEmpty),
+      map((u) => {
+        if (!u) {
+          return BigInt(-1);
+        }
+        const account = u.accountInfo ? this.toAccountInfoMini(u.accountInfo.data) : null;
+        return account?.amount ?? BigInt(-1);
+      }),
+      shareReplay(1)
+    );
+  }
+
+  getTokenBalanceRawStream(accountId: SolanaKey, getInitial = true, skipEmpty = true): Observable<BN> {
+    const update$ = this.solanaUpdate.safeAccountUpdate(accountId, undefined, true, getInitial);
+    return update$.pipe(
+      filter((u) => !skipEmpty || Boolean(u)),
+      map((u) => {
+        if (!u || !u.accountInfo) {
+          return new BN(0);
+        }
+        const account = this.toAccountInfo(u.accountInfo);
+        if (!account) {
+          return new BN(0);
+        }
+        return new BN(account.amountString);
+      }),
+      shareReplay(1)
+    );
+  }
+
+  getTokenBalanceStream(accountId: SolanaKey, mintId: SolanaKey, getInitial = true): Observable<number | null> {
+    this.logger.logAt(
+      7,
+      `${this.logPrefix} Getting token balance stream for ${toKeyString(accountId)} and mint ${toKeyString(mintId)}`
+    );
+    const account$ = this.solanaUpdate.safeAccountUpdate(accountId, undefined, true, getInitial);
+    const mint$ = this.solanaUpdate.safeAccountUpdate(mintId, undefined, false, getInitial);
+    return combineLatest([account$, mint$]).pipe(
+      map(([a, b]) => {
+        if (!a?.accountInfo || !b?.accountInfo) {
+          return null;
+        }
+        const account = this.toAccountInfo(a.accountInfo);
+        const mint = this.toMintInfo(b.accountInfo);
+        if (!account || !mint) {
+          this.logger.logAt(
+            4,
+            `${this.logPrefix} Missing mint/account in balance stream.
+            Account: ${JSON.stringify(a)}
+            Mint: ${toKeyString(mintId)}`
+          );
+          return null;
+        }
+        const precision = Math.pow(10, mint?.decimals || 0);
+        // const balance = account.amount.toNumber() / precision;
+        const balance = Number(account.amountString) / precision;
+        return balance;
+      }),
+      shareReplay(1)
+    );
+  }
+
+  getTokenMintStream(mintId: SolanaKey): Observable<IMintInfo | null> {
+    return this.solanaUpdate.safeAccountUpdate(mintId).pipe(
+      map((a) => (a.accountInfo ? this.toMintInfo(a.accountInfo) : null))
+      // shareReplay(1)
+    );
+  }
+
+  getTokenSupplyStream(mintId: SolanaKey): Observable<number | null> {
+    this.logger.logAt(5, `${this.logPrefix} Getting supply stream for ${toKeyString(mintId)}`);
+    return this.getTokenMintStream(mintId).pipe(
+      map((mint) => {
+        if (!mint) {
+          return null;
+        }
+        const precision = Math.pow(10, mint.decimals || 0);
+        const supply = Number(mint.supplyString) / precision;
+        return supply;
+      })
+    );
   }
 
   async getMint(mint: SolanaKey, force = false, cacheOnly = false): Promise<IMintInfo | null> {
