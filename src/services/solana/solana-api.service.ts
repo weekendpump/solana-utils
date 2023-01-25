@@ -2,6 +2,8 @@ import { ReplaySubject } from 'rxjs';
 import {
   Commitment,
   ComputeBudgetProgram,
+  ConfirmedSignatureInfo,
+  ConfirmedSignaturesForAddress2Options,
   Connection,
   ContactInfo,
   EpochInfo,
@@ -35,7 +37,12 @@ import {
 } from '@solana/web3.js';
 
 import { Buffer } from 'buffer';
-import { ISolanaAccountUpdate, ISolanaRecentHash, ISolanaSimulationBalances } from '../../interfaces';
+import {
+  ISolanaAccountUpdate,
+  ISolanaClusterInfo,
+  ISolanaRecentHash,
+  ISolanaSimulationBalances,
+} from '../../interfaces';
 import { CompatibleTransaction, IMap, SolanaConnection, SolanaRpcTag } from '../../types';
 import { BaseLoggerService } from '../base-logger.service';
 import { MEMO_PROGRAM_ID } from '../../consts';
@@ -81,6 +88,41 @@ export class SolanaApiService {
   async getVoteAccounts(): Promise<VoteAccountStatus> {
     const c = this.connect();
     return await c.getVoteAccounts();
+  }
+
+  async findRpcNodes(delayMs = 300): Promise<ISolanaClusterInfo[]> {
+    let nodes = await this.getClusterNodes();
+    nodes = nodes.filter((n) => Boolean(n.rpc));
+
+    const votes = await this.getVoteAccounts();
+    const rpcInfo: ISolanaClusterInfo[] = [];
+    let found = 0;
+    let skipped = 0;
+
+    for (const n of nodes) {
+      const vote = votes.current.find((v) => v.nodePubkey === n.pubkey);
+      if (!vote) {
+        this.logger.logAt(9, `${this.logPrefix} skipping vote account for ${n.pubkey}`);
+        skipped++;
+        continue;
+      }
+      found++;
+      this.logger.logAt(6, `${this.logPrefix} got vote account for ${n.pubkey}: ${vote.activatedStake}.`);
+      const rpc = { ...n, stake: vote.activatedStake };
+      rpcInfo.push(rpc);
+      if (delayMs) {
+        await sleep(300);
+      }
+    }
+
+    rpcInfo.sort((a, b) => (a.stake < b.stake ? 1 : -1));
+
+    this.logger.logAt(
+      5,
+      `${this.logPrefix} RPC nodes found : ${found}, skipped: ${skipped}, total: ${found + skipped}.`
+    );
+
+    return rpcInfo;
   }
 
   async getMinBalanceForRentExemption(n: number): Promise<number> {
@@ -371,6 +413,68 @@ export class SolanaApiService {
     const c: SolanaConnection = connection ?? this.connect('processed');
     const response = await c.getEpochInfo(commitment);
     return response;
+  }
+
+  /** Main method for getting large number of signatures */
+  async getSignatures(
+    address: SolanaKey,
+    options?: ConfirmedSignaturesForAddress2Options,
+    connection?: Connection,
+    commitment: Finality = 'confirmed',
+    delayMs = 300,
+    minBlockTime = 0
+  ): Promise<ConfirmedSignatureInfo[]> {
+    const c = connection ?? this.connect(commitment, 'history');
+    if (!options) {
+      options = { limit: 1000 };
+    }
+    if (!options.before && options.before !== undefined) {
+      delete options.before;
+    }
+
+    if (Number(options?.limit) <= 1000) {
+      this.logger.logAt(
+        8,
+        `${this.logPrefix} getting single batch of confirmed signatures for ${toKeyString(
+          address
+        )} and options: ${JSON.stringify(options)}`
+      );
+      const response = await c.getSignaturesForAddress(toKey(address), options, commitment);
+      return response;
+    }
+
+    let before = options.before;
+    const results: ConfirmedSignatureInfo[] = [];
+
+    while (results.length < Number(options.limit)) {
+      const batchOptions = {
+        before,
+        limit: 1000,
+      };
+      const batchSigs = await c.getSignaturesForAddress(toKey(address), batchOptions);
+      if (!batchSigs || batchSigs.length === 0) {
+        break;
+      }
+      results.push(...batchSigs);
+      const last = batchSigs[batchSigs.length - 1];
+      before = last.signature;
+      this.logger.logAt(
+        8,
+        `${this.logPrefix} Found a batch of ${batchSigs.length} signatures for ${toKeyString(address)}, Total: ${
+          results?.length
+        }`
+      );
+      if (minBlockTime > 0 && last.blockTime && last.blockTime < minBlockTime) {
+        this.logger.logAt(
+          8,
+          `${this.logPrefix} Min blocktime ${minBlockTime} reached. Finishing with ${results.length} signatures.`
+        );
+        break;
+      }
+      await sleep(delayMs);
+    }
+
+    return results;
   }
 
   subscribeToSlotChanges(connection?: SolanaConnection, callback?: SlotChangeCallback) {
