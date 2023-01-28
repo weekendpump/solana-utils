@@ -16,7 +16,7 @@ import { BaseLoggerService } from '../base-logger.service';
 import { getWritableAccountsVersioned, SolanaKey, stringify, toKey, toKeyString } from '../../utils';
 import { ISolanaSimulationBalances } from '../../interfaces';
 import { IMap, SolanaConnection } from '../../types';
-import { SPL_TOKEN_LAYOUT_LENGTH } from '../../consts';
+import { SOLANA_MAX_TX_LENGTH, SPL_TOKEN_LAYOUT_LENGTH } from '../../consts';
 
 /** Helpers for creating transactions quickly and simulation */
 export class SolanaTxService {
@@ -88,16 +88,19 @@ export class SolanaTxService {
         });
         const msg = message.compileToV0Message(addressLookupTableAccounts);
         const serialized = msg.serialize();
-        if (serialized) {
+        // TODO: improve for edge cases
+        if (serialized && serialized.length < SOLANA_MAX_TX_LENGTH - 32) {
           batch = instructions;
           tx = new VersionedTransaction(msg);
           this.logger.logAt(
             8,
             `${this.logPrefix} Serialization to ${serialized.length} bytes ok, trying to pack more than ${batch?.length} ixs`
           );
+        } else {
+          throw Error('Tx too long or cannot be serialized');
         }
       } catch (err) {
-        this.logger.logAt(8, `${this.logPrefix} Serialization error, let's try to close it with ${batch.length} ixs`);
+        this.logger.logAt(8, `${this.logPrefix} Serialization error, closing with ${batch.length} ixs`);
         if (tx) {
           results.push(tx);
           batch = [];
