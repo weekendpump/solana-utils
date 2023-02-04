@@ -89,7 +89,7 @@ export class SolanaTxService {
         const msg = message.compileToV0Message(addressLookupTableAccounts);
         const serialized = msg.serialize();
         // TODO: improve for edge cases
-        if (serialized && serialized.length < SOLANA_MAX_TX_LENGTH - 32) {
+        if (serialized && serialized.length < SOLANA_MAX_TX_LENGTH - 64) {
           batch = instructions;
           tx = new VersionedTransaction(msg);
           this.logger.logAt(
@@ -103,7 +103,7 @@ export class SolanaTxService {
         this.logger.logAt(8, `${this.logPrefix} Serialization error, closing with ${batch.length} ixs`);
         if (tx) {
           results.push(tx);
-          batch = [];
+          batch = [...chunk];
           tx = null;
         } else {
           throw new Error('Cannot pack ix batch into single tx');
